@@ -24,7 +24,7 @@ export default function SplashScreen() {
       <StatusBar style="light" />
 
       <ImageBackground
-        source={require("../../assets/images/frescoadmin.png")}
+        source={require("../../assets/images/first3.jpg")}
         style={styles.image}
         resizeMode="cover"
       >
@@ -34,11 +34,11 @@ export default function SplashScreen() {
           <View style={styles.content}>
 {/*             <Text style={styles.logoText}>FRESCO</Text> */}
 
-            <View style={styles.taglineBox}>
-              <Text style={styles.tagline}>
-                Freshness Delivered
-              </Text>
-            </View>
+{/*             <View style={styles.taglineBox}> */}
+{/*               <Text style={styles.tagline}> */}
+{/*                 Freshness Delivered */}
+{/*               </Text> */}
+{/*             </View> */}
           </View>
         )}
       </ImageBackground>

@@ -37,7 +37,7 @@ export default function OrdersScreen() {
       case "Shipped":
         return { Icon: Truck, color: "#9C27B0" };
       case "Delivered":
-        return { Icon: CheckCircle, color: "#2E7D32" };
+        return { Icon: CheckCircle, color: "#124703" };
       case "Cancelled":
         return { Icon: XCircle, color: "#C62828" };
       default:
@@ -65,8 +65,8 @@ export default function OrdersScreen() {
   if (!fontsLoaded) return null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#2E7D32" }}>
-      <StatusBar style="light" backgroundColor="#2E7D32" />
+    <View style={{ flex: 1, backgroundColor: "#124703" }}>
+      <StatusBar style="light" backgroundColor="#124703" />
 
       {/* Header with proper insets */}
       <View
@@ -74,7 +74,7 @@ export default function OrdersScreen() {
           paddingTop: insets.top + 16,
           paddingBottom: 16,
           paddingHorizontal: 20,
-          backgroundColor: "#2E7D32",
+          backgroundColor: "#124703",
         }}
       >
         <Text
@@ -250,7 +250,7 @@ export default function OrdersScreen() {
                             alignItems: "center",
                             justifyContent: "center",
                             borderWidth: 2,
-                            borderColor: "#FFEB3B",
+                            borderColor: "#BFDD27",
                           }}
                         >
                           <Text style={{ fontSize: 24 }}>{item.image}</Text>
@@ -279,7 +279,7 @@ export default function OrdersScreen() {
                           style={{
                             fontFamily: "Inter_700Bold",
                             fontSize: 14,
-                            color: "#2E7D32",
+                            color: "#124703",
                           }}
                         >
                           ₹{(item.price || item.retailPrice) * item.quantity}
@@ -363,7 +363,7 @@ export default function OrdersScreen() {
                           Alert.alert("Reorder", "Item will be added to cart")
                         }
                         style={{
-                          backgroundColor: "#2E7D32",
+                          backgroundColor: "#124703",
                           paddingHorizontal: 16,
                           paddingVertical: 10,
                           borderRadius: 12,

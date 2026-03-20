@@ -5,10 +5,25 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Modal,
+  Alert,
+  Image,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Trash2, Plus, Minus, ShoppingBag, MapPin } from "lucide-react-native";
+import {
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBag,
+  MapPin,
+  X,
+  Home,
+  Building2,
+  Check,
+  Star,
+  Weight,
+} from "lucide-react-native";
 import { useStore } from "@/store/useStore";
 import { useRouter } from "expo-router";
 import {
@@ -17,6 +32,35 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
+
+// Local images - FIXED PATHS (going up 3 levels to assets)
+const PRODUCT_IMAGES = {
+  "Red Capsicum": require("../../../assets/images/redcap.png"),
+  "Broccoli": require("../../../assets/images/broccoli.webp"),
+  "Zucchini": require("../../../assets/images/zucchini.webp"),
+  "Tomato": require("../../../assets/images/tomoto.webp"),
+  "Onion": require("../../../assets/images/onion.webp"),
+  "Potato": require("../../../assets/images/potato.webp"),
+  "Apple": require("../../../assets/images/apple.webp"),
+  "dragon": require("../../../assets/images/dragon.avif"),
+  "Banana": require("../../../assets/images/banana.webp"),
+  "Orange": require("../../../assets/images/orange.webp"),
+  "Milk": require("../../../assets/images/milk.avif"),
+  "Paneer": require("../../../assets/images/panner.avif"),
+  "Curd": require("../../../assets/images/curd.avif"),
+  "Soya Chunks": require("../../../assets/images/soya.avif"),
+  "Tofu": require("../../../assets/images/tofu.avif"),
+  "Chips": require("../../../assets/images/chips.avif"),
+  "Biscuits": require("../../../assets/images/biscuit.avif"),
+  "Prawns Small": require("../../../assets/images/prawns.avif"),
+  "Prawns Medium": require("../../../assets/images/prawns1.avif"),
+  "Prawns Large": require("../../../assets/images/prawns.avif"),
+  "Green Chilli": require("../../../assets/images/banana.webp"),
+  "Coriander Bunch": require("../../../assets/images/banana.webp"),
+  "Coal": require("../../../assets/images/coal.png"),
+};
+
+const FALLBACK_IMAGE = require("../../../assets/images/banana.webp");
 
 export default function CartScreen() {
   const insets = useSafeAreaInsets();
@@ -29,16 +73,89 @@ export default function CartScreen() {
 
   const {
     cart,
-    updateCartQuantity,
+    updateQuantity,
     removeFromCart,
     clearCart,
     userRole,
     addOrder,
+    getCartTotalWeight,
+    getWeightInKg,
   } = useStore();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showLimitToast, setShowLimitToast] = useState(false);
+  const [limitMessage, setLimitMessage] = useState("");
   const successAnim = useRef(new Animated.Value(0)).current;
 
+  const [selectedAddress, setSelectedAddress] = useState({
+    id: "1",
+    label: "Home",
+    address: "123 Green Street, Vizag - 530001",
+    city: "Vizag",
+    pincode: "530001",
+    landmark: "Near City Park",
+    phone: "+91 98765 43210",
+    default: true,
+    type: "home",
+  });
+
+  const [addresses, setAddresses] = useState([
+    {
+      id: "1",
+      label: "Home",
+      address: "123 Green Street, Vizag - 530001",
+      city: "Vizag",
+      pincode: "530001",
+      landmark: "Near City Park",
+      phone: "+91 98765 43210",
+      default: true,
+      type: "home",
+    },
+    {
+      id: "2",
+      label: "Office",
+      address: "456 Tech Park, Vizag - 530037",
+      city: "Vizag",
+      pincode: "530037",
+      landmark: "Opposite Metro Station",
+      phone: "+91 98765 12345",
+      default: false,
+      type: "office",
+    },
+    {
+      id: "3",
+      label: "Parents Home",
+      address: "789 Beach Road, Vizag - 530002",
+      city: "Vizag",
+      pincode: "530002",
+      landmark: "Near Lighthouse",
+      phone: "+91 98765 67890",
+      default: false,
+      type: "home",
+    },
+  ]);
+
+  const cartTotalWeight = getCartTotalWeight();
+
+  const getProductImage = (product) => {
+    // Try to get image by imageKey or name
+    if (product.imageKey) {
+      return PRODUCT_IMAGES[product.imageKey] || FALLBACK_IMAGE;
+    }
+    // Try to extract imageKey from product
+    const imageKey = product.name.split('(')[0].trim();
+    return PRODUCT_IMAGES[imageKey] || FALLBACK_IMAGE;
+  };
+
   const handleCheckout = () => {
+    // Check if cart exceeds 30kg limit
+    if (cartTotalWeight > 30) {
+      setLimitMessage(`Cart exceeds 30kg limit (${cartTotalWeight.toFixed(1)}kg). Please reduce quantity.`);
+      setShowLimitToast(true);
+      setTimeout(() => setShowLimitToast(false), 3000);
+      return;
+    }
+
     // Show success animation
     setShowSuccess(true);
     Animated.sequence([
@@ -61,12 +178,65 @@ export default function CartScreen() {
         status: "Pending",
         date: new Date().toLocaleDateString(),
         type: userRole,
+        deliveryAddress: selectedAddress,
+        totalWeight: cartTotalWeight,
       };
       addOrder(newOrder);
       setShowSuccess(false);
       clearCart();
       router.push("/(tabs)/orders");
     });
+  };
+
+  const handleUpdateQuantity = (itemId, newQuantity, item) => {
+    if (newQuantity < 1) {
+      removeFromCart(itemId);
+      return;
+    }
+
+    // Check limits before incrementing
+    if (newQuantity > (cart.find(i => i.id === itemId)?.quantity || 0)) {
+      const itemWeight = getWeightInKg(item.weight);
+      const currentItem = cart.find(i => i.id === itemId);
+      const currentItemQuantity = currentItem ? currentItem.quantity : 0;
+      const newItemTotalWeight = (currentItemQuantity + 1) * itemWeight;
+
+      // Check individual product limit (10kg)
+      if (newItemTotalWeight > 10) {
+        setLimitMessage(`Cannot add more than 10kg of ${item.name.split('(')[0].trim()}`);
+        setShowLimitToast(true);
+        setTimeout(() => setShowLimitToast(false), 2000);
+        return;
+      }
+
+      // Check overall cart limit (30kg)
+      const newTotalWeight = cartTotalWeight + itemWeight;
+      if (newTotalWeight > 30) {
+        const remainingWeight = (30 - (cartTotalWeight - (currentItemQuantity * itemWeight))).toFixed(1);
+        setLimitMessage(`Overall cart limit is 30kg. You can add only ${remainingWeight}kg more.`);
+        setShowLimitToast(true);
+        setTimeout(() => setShowLimitToast(false), 2000);
+        return;
+      }
+    }
+
+    updateQuantity(itemId, newQuantity);
+  };
+
+  const handleSelectAddress = (address) => {
+    setSelectedAddress(address);
+    setShowAddressModal(false);
+  };
+
+  const getAddressTypeIcon = (type) => {
+    switch(type) {
+      case "home":
+        return <Home size={20} color="#124703" />;
+      case "office":
+        return <Building2 size={20} color="#124703" />;
+      default:
+        return <MapPin size={20} color="#124703" />;
+    }
   };
 
   const subtotal = cart.reduce((sum, item) => {
@@ -83,8 +253,8 @@ export default function CartScreen() {
 
   if (cart.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#2E7D32" }}>
-        <StatusBar style="light" backgroundColor="#2E7D32" />
+      <View style={{ flex: 1, backgroundColor: "#124703" }}>
+        <StatusBar style="light" backgroundColor="#124703" />
 
         {/* Header */}
         <View
@@ -92,7 +262,7 @@ export default function CartScreen() {
             paddingTop: insets.top + 16,
             paddingBottom: 16,
             paddingHorizontal: 20,
-            backgroundColor: "#2E7D32",
+            backgroundColor: "#124703",
           }}
         >
           <Text
@@ -159,8 +329,8 @@ export default function CartScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#2E7D32" }}>
-      <StatusBar style="light" backgroundColor="#2E7D32" />
+    <View style={{ flex: 1, backgroundColor: "#124703" }}>
+      <StatusBar style="light" backgroundColor="#124703" />
 
       {/* Header */}
       <View
@@ -168,7 +338,7 @@ export default function CartScreen() {
           paddingTop: insets.top + 16,
           paddingBottom: 16,
           paddingHorizontal: 20,
-          backgroundColor: "#2E7D32",
+          backgroundColor: "#124703",
         }}
       >
         <Text
@@ -188,9 +358,41 @@ export default function CartScreen() {
             marginTop: 4,
           }}
         >
-          {cart.length} {cart.length === 1 ? "item" : "items"}
+          {cart.length} {cart.length === 1 ? "item" : "items"} • {cartTotalWeight.toFixed(1)}kg / 30kg
         </Text>
       </View>
+
+      {/* Limit Warning Toast */}
+      {showLimitToast && (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: insets.top + 100,
+            left: 20,
+            right: 20,
+            backgroundColor: '#C62828',
+            borderRadius: 30,
+            padding: 16,
+            zIndex: 1000,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 14,
+              color: "#FFFFFF",
+              textAlign: "center",
+            }}
+          >
+            ⚠️ {limitMessage}
+          </Text>
+        </Animated.View>
+      )}
 
       <View style={{ flex: 1, backgroundColor: "#F5F5F5", borderTopLeftRadius: 30, borderTopRightRadius: 30, marginTop: 20 }}>
         <ScrollView
@@ -202,9 +404,75 @@ export default function CartScreen() {
           }}
           showsVerticalScrollIndicator={false}
         >
+          {/* Weight Progress Bar */}
+          <View
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: 16,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: "#E0E0E0",
+            }}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <Text
+                style={{
+                  fontFamily: "Inter_600SemiBold",
+                  fontSize: 14,
+                  color: "#1B5E20",
+                }}
+              >
+                Cart Weight Limit
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Weight size={16} color="#124703" />
+                <Text
+                  style={{
+                    fontFamily: "Inter_700Bold",
+                    fontSize: 14,
+                    color: cartTotalWeight > 30 ? "#C62828" : "#124703",
+                  }}
+                >
+                  {cartTotalWeight.toFixed(1)}kg / 30kg
+                </Text>
+              </View>
+            </View>
+            <View
+              style={{
+                height: 8,
+                backgroundColor: "#E0E0E0",
+                borderRadius: 4,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  height: 8,
+                  width: `${Math.min((cartTotalWeight / 30) * 100, 100)}%`,
+                  backgroundColor: cartTotalWeight > 30 ? "#C62828" : "#124703",
+                  borderRadius: 4,
+                }}
+              />
+            </View>
+            {cartTotalWeight > 30 && (
+              <Text
+                style={{
+                  fontFamily: "Inter_400Regular",
+                  fontSize: 12,
+                  color: "#C62828",
+                  marginTop: 4,
+                }}
+              >
+                Exceeds 30kg limit. Please reduce quantity.
+              </Text>
+            )}
+          </View>
+
           {/* Delivery Address */}
           {userRole === "retail" && (
-            <View
+            <TouchableOpacity
+              onPress={() => setShowAddressModal(true)}
               style={{
                 backgroundColor: "#FFFFFF",
                 borderRadius: 16,
@@ -212,6 +480,11 @@ export default function CartScreen() {
                 marginBottom: 16,
                 borderWidth: 1,
                 borderColor: "#E0E0E0",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+                elevation: 2,
               }}
             >
               <View
@@ -227,19 +500,44 @@ export default function CartScreen() {
                     justifyContent: "center",
                   }}
                 >
-                  <MapPin size={20} color="#2E7D32" />
+                  {getAddressTypeIcon(selectedAddress.type)}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontFamily: "Inter_600SemiBold",
-                      fontSize: 14,
-                      color: "#1B5E20",
-                      marginBottom: 2,
-                    }}
-                  >
-                    Deliver to Home
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                    <Text
+                      style={{
+                        fontFamily: "Inter_600SemiBold",
+                        fontSize: 14,
+                        color: "#1B5E20",
+                      }}
+                    >
+                      Deliver to {selectedAddress.label}
+                    </Text>
+                    {selectedAddress.default && (
+                      <View
+                        style={{
+                          backgroundColor: "#E8F5E9",
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 8,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 2,
+                        }}
+                      >
+                        <Star size={10} color="#124703" fill="#124703" />
+                        <Text
+                          style={{
+                            fontFamily: "Inter_600SemiBold",
+                            fontSize: 9,
+                            color: "#124703",
+                          }}
+                        >
+                          DEFAULT
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <Text
                     style={{
                       fontFamily: "Inter_400Regular",
@@ -247,22 +545,41 @@ export default function CartScreen() {
                       color: "#757575",
                     }}
                   >
-                    123 Green Street, vizag - 560001
+                    {selectedAddress.address}
                   </Text>
+                  {selectedAddress.landmark && (
+                    <Text
+                      style={{
+                        fontFamily: "Inter_400Regular",
+                        fontSize: 11,
+                        color: "#9E9E9E",
+                        marginTop: 2,
+                      }}
+                    >
+                      Landmark: {selectedAddress.landmark}
+                    </Text>
+                  )}
                 </View>
-                <TouchableOpacity>
+                <View
+                  style={{
+                    backgroundColor: "#124703",
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 12,
+                  }}
+                >
                   <Text
                     style={{
                       fontFamily: "Inter_600SemiBold",
-                      fontSize: 13,
-                      color: "#2E7D32",
+                      fontSize: 12,
+                      color: "#FFFFFF",
                     }}
                   >
                     Change
                   </Text>
-                </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
 
           {/* Cart Items */}
@@ -271,6 +588,10 @@ export default function CartScreen() {
               userRole === "wholesale"
                 ? item.wholesalePrice
                 : item.price || item.retailPrice;
+
+            const itemWeight = getWeightInKg(item.weight);
+            const totalItemWeight = (itemWeight * item.quantity).toFixed(2);
+
             return (
               <View
                 key={item.id}
@@ -281,24 +602,25 @@ export default function CartScreen() {
                   marginBottom: 12,
                   borderWidth: 1,
                   borderColor: "#E0E0E0",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 2,
+                  elevation: 1,
                 }}
               >
                 <View style={{ flexDirection: "row", gap: 12 }}>
-                  {/* Product Image */}
-                  <View
+                  {/* Product Image - Now using actual images */}
+                  <Image
+                    source={getProductImage(item)}
                     style={{
                       width: 70,
                       height: 70,
                       borderRadius: 35,
-                      backgroundColor: "#F5F5F5",
-                      alignItems: "center",
-                      justifyContent: "center",
                       borderWidth: 2,
-                      borderColor: "#FFEB3B",
+                      borderColor: "#BFDD27",
                     }}
-                  >
-                    <Text style={{ fontSize: 32 }}>{item.image}</Text>
-                  </View>
+                  />
 
                   {/* Product Details */}
                   <View style={{ flex: 1 }}>
@@ -317,16 +639,26 @@ export default function CartScreen() {
                         fontFamily: "Inter_400Regular",
                         fontSize: 12,
                         color: "#757575",
-                        marginBottom: 8,
+                        marginBottom: 2,
                       }}
                     >
-                      {item.weight}
+                      {item.weight} each
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: "Inter_400Regular",
+                        fontSize: 11,
+                        color: "#9E9E9E",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Total: {totalItemWeight}kg
                     </Text>
                     <Text
                       style={{
                         fontFamily: "Inter_700Bold",
                         fontSize: 16,
-                        color: "#2E7D32",
+                        color: "#124703",
                       }}
                     >
                       ₹{price} × {item.quantity} = ₹
@@ -361,15 +693,16 @@ export default function CartScreen() {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={() =>
-                      updateCartQuantity(item.id, Math.max(1, item.quantity - 1))
-                    }
+                    onPress={() => {
+                      const newQuantity = item.quantity - 1;
+                      handleUpdateQuantity(item.id, newQuantity, item);
+                    }}
                     disabled={item.quantity <= 1}
                     style={{
                       width: 32,
                       height: 32,
                       borderRadius: 16,
-                      backgroundColor: item.quantity <= 1 ? "#F5F5F5" : "#2E7D32",
+                      backgroundColor: item.quantity <= 1 ? "#F5F5F5" : "#124703",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
@@ -402,12 +735,15 @@ export default function CartScreen() {
                   </View>
 
                   <TouchableOpacity
-                    onPress={() => updateCartQuantity(item.id, item.quantity + 1)}
+                    onPress={() => {
+                      const newQuantity = item.quantity + 1;
+                      handleUpdateQuantity(item.id, newQuantity, item);
+                    }}
                     style={{
                       width: 32,
                       height: 32,
                       borderRadius: 16,
-                      backgroundColor: "#2E7D32",
+                      backgroundColor: "#124703",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
@@ -452,7 +788,7 @@ export default function CartScreen() {
                   color: "#757575",
                 }}
               >
-                Subtotal
+                Subtotal ({cartTotalWeight.toFixed(1)}kg)
               </Text>
               <Text
                 style={{
@@ -514,7 +850,7 @@ export default function CartScreen() {
                 style={{
                   fontFamily: "Inter_700Bold",
                   fontSize: 18,
-                  color: "#2E7D32",
+                  color: "#124703",
                 }}
               >
                 ₹{total.toFixed(2)}
@@ -525,11 +861,13 @@ export default function CartScreen() {
           {/* Checkout Button */}
           <TouchableOpacity
             onPress={handleCheckout}
+            disabled={cartTotalWeight > 30}
             style={{
-              backgroundColor: "#2E7D32",
+              backgroundColor: cartTotalWeight > 30 ? "#BDBDBD" : "#124703",
               paddingVertical: 16,
               borderRadius: 16,
               alignItems: "center",
+              opacity: cartTotalWeight > 30 ? 0.7 : 1,
             }}
           >
             <Text
@@ -539,11 +877,230 @@ export default function CartScreen() {
                 color: "#FFFFFF",
               }}
             >
-              {userRole === "wholesale" ? "Submit Order" : "Proceed to Checkout"}
+              {cartTotalWeight > 30
+                ? "Exceeds 30kg Limit"
+                : userRole === "wholesale"
+                  ? "Submit Order"
+                  : "Proceed to Checkout"}
             </Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Address Selection Modal */}
+      <Modal visible={showAddressModal} transparent animationType="slide">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            justifyContent: "flex-end",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderTopLeftRadius: 30,
+              borderTopRightRadius: 30,
+              paddingTop: 20,
+              paddingBottom: insets.bottom + 20,
+              paddingHorizontal: 24,
+              maxHeight: "80%",
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 20,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: "Inter_700Bold",
+                  fontSize: 20,
+                  color: "#1B5E20",
+                }}
+              >
+                Select Delivery Address
+              </Text>
+              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
+                <X size={24} color="#757575" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {addresses.map((address) => (
+                <TouchableOpacity
+                  key={address.id}
+                  onPress={() => handleSelectAddress(address)}
+                  style={{
+                    backgroundColor: selectedAddress.id === address.id ? "#E8F5E9" : "#FFFFFF",
+                    borderRadius: 16,
+                    padding: 16,
+                    marginBottom: 12,
+                    borderWidth: 2,
+                    borderColor: selectedAddress.id === address.id ? "#124703" : "#E0E0E0",
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: "#E8F5E9",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {getAddressTypeIcon(address.type)}
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <Text
+                          style={{
+                            fontFamily: "Inter_700Bold",
+                            fontSize: 16,
+                            color: "#1B5E20",
+                          }}
+                        >
+                          {address.label}
+                        </Text>
+                        {address.default && (
+                          <View
+                            style={{
+                              backgroundColor: "#124703",
+                              paddingHorizontal: 8,
+                              paddingVertical: 2,
+                              borderRadius: 8,
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <Star size={10} color="#FFFFFF" fill="#FFFFFF" />
+                            <Text
+                              style={{
+                                fontFamily: "Inter_600SemiBold",
+                                fontSize: 10,
+                                color: "#FFFFFF",
+                              }}
+                            >
+                              DEFAULT
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <Text
+                        style={{
+                          fontFamily: "Inter_400Regular",
+                          fontSize: 14,
+                          color: "#424242",
+                          marginBottom: 2,
+                        }}
+                      >
+                        {address.address}
+                      </Text>
+
+                      <Text
+                        style={{
+                          fontFamily: "Inter_400Regular",
+                          fontSize: 13,
+                          color: "#757575",
+                          marginBottom: 2,
+                        }}
+                      >
+                        {address.city} - {address.pincode}
+                      </Text>
+
+                      {address.landmark && (
+                        <Text
+                          style={{
+                            fontFamily: "Inter_400Regular",
+                            fontSize: 12,
+                            color: "#9E9E9E",
+                            marginBottom: 4,
+                          }}
+                        >
+                          Landmark: {address.landmark}
+                        </Text>
+                      )}
+
+                      <Text
+                        style={{
+                          fontFamily: "Inter_400Regular",
+                          fontSize: 13,
+                          color: "#124703",
+                        }}
+                      >
+                        Phone: {address.phone}
+                      </Text>
+                    </View>
+
+                    {selectedAddress.id === address.id && (
+                      <View
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: "#124703",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Check size={16} color="#FFFFFF" />
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity
+                onPress={() => {
+                  setShowAddressModal(false);
+                  Alert.alert(
+                    "Add Address",
+                    "Please add address from Profile section",
+                    [
+                      { text: "OK" },
+                      {
+                        text: "Go to Profile",
+                        onPress: () => {
+                          router.push("/(tabs)/profile");
+                        }
+                      }
+                    ]
+                  );
+                }}
+                style={{
+                  backgroundColor: "#F5F5F5",
+                  borderRadius: 16,
+                  padding: 16,
+                  alignItems: "center",
+                  marginTop: 8,
+                  marginBottom: 16,
+                  borderWidth: 2,
+                  borderColor: "#124703",
+                  borderStyle: "dashed",
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: "Inter_700Bold",
+                    fontSize: 16,
+                    color: "#124703",
+                  }}
+                >
+                  + Add New Address
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Success Overlay */}
       {showSuccess && (
@@ -593,7 +1150,7 @@ export default function CartScreen() {
               style={{
                 fontFamily: "Inter_700Bold",
                 fontSize: 22,
-                color: "#2E7D32",
+                color: "#124703",
                 marginBottom: 8,
               }}
             >

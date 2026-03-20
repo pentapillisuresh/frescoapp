@@ -75,7 +75,7 @@ export default function HomeScreen() {
           paddingTop: insets.top + 12,
           paddingBottom: 12,
           paddingHorizontal: 16,
-          backgroundColor: "#2E7D32",
+          backgroundColor: "#124703",
         }}
       >
         <View
@@ -109,7 +109,7 @@ export default function HomeScreen() {
 
           <View
             style={{
-              backgroundColor: "#FFEB3B",
+              backgroundColor: "#BFDD27",
               paddingHorizontal: 14,
               paddingVertical: 8,
               borderRadius: 20,
@@ -146,7 +146,7 @@ export default function HomeScreen() {
         >
           <Video
             ref={videoRef}
-            source={require("../../../assets/images/frescovideo.mp4")}
+            source={require("../../../assets/images/fresco2.mp4")}
             style={{ width: "100%", height: "100%" }}
             resizeMode={ResizeMode.COVER}
             isLooping
@@ -209,7 +209,7 @@ export default function HomeScreen() {
                   position: "absolute",
                   top: 12,
                   left: 12,
-                  backgroundColor: "#2E7D32",
+                  backgroundColor: "#124703",
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 20,
@@ -261,7 +261,7 @@ export default function HomeScreen() {
                     width: 40,
                     height: 40,
                     borderRadius: 20,
-                    backgroundColor: "#FFEB3B",
+                    backgroundColor: "#BFDD27",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
@@ -349,7 +349,7 @@ export default function HomeScreen() {
                       width: 40,
                       height: 40,
                       borderRadius: 20,
-                      backgroundColor: "#FFEB3B",
+                      backgroundColor: "#BFDD27",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
@@ -369,8 +369,8 @@ export default function HomeScreen() {
               backgroundColor: "#E8F5E9",
               borderRadius: 16,
               padding: 20,
-              borderLeftWidth: 4,
-              borderLeftColor: "#2E7D32",
+              borderLeftWidth: 0,
+              borderLeftColor: "#124703",
             }}
           >
             <Text
@@ -388,7 +388,7 @@ export default function HomeScreen() {
                 style={{
                   fontFamily: "Inter_400Regular",
                   fontSize: 13,
-                  color: "#2E7D32",
+                  color: "#124703",
                   lineHeight: 18,
                 }}
               >
@@ -398,7 +398,7 @@ export default function HomeScreen() {
                 style={{
                   fontFamily: "Inter_400Regular",
                   fontSize: 13,
-                  color: "#2E7D32",
+                  color: "#124703",
                   lineHeight: 18,
                 }}
               >
@@ -411,7 +411,7 @@ export default function HomeScreen() {
                 style={{
                   fontFamily: "Inter_400Regular",
                   fontSize: 13,
-                  color: "#2E7D32",
+                  color: "#124703",
                   lineHeight: 18,
                 }}
               >
@@ -573,7 +573,7 @@ export default function HomeScreen() {
                   marginBottom: 12,
                   borderWidth: 2,
                   borderColor:
-                    koveraLocation === outlet ? "#2E7D32" : "transparent",
+                    koveraLocation === outlet ? "#124703" : "transparent",
                 }}
               >
                 <View
@@ -587,7 +587,7 @@ export default function HomeScreen() {
                     marginRight: 12,
                   }}
                 >
-                  <MapPin size={20} color="#2E7D32" />
+                  <MapPin size={20} color="#124703" />
                 </View>
                 <Text
                   style={{
@@ -617,7 +617,7 @@ export default function HomeScreen() {
             width: 60,
             height: 60,
             borderRadius: 30,
-            backgroundColor: "#2E7D32",
+            backgroundColor: "#124703",
             alignItems: "center",
             justifyContent: "center",
             shadowColor: "#000",
@@ -636,7 +636,7 @@ export default function HomeScreen() {
               width: 24,
               height: 24,
               borderRadius: 12,
-              backgroundColor: "#FFEB3B",
+              backgroundColor: "#BFDD27",
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 2,

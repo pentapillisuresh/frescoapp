@@ -67,6 +67,55 @@ export const useStore = create(
         return cart.reduce((sum, item) => sum + item.quantity, 0);
       },
 
+      // Helper function to extract weight in kg
+      getWeightInKg: (weightString) => {
+        if (!weightString) return 1;
+
+        // Extract numeric value
+        const numericValue = parseFloat(weightString) || 1;
+
+        if (weightString.includes('kg') || weightString.includes('Kg') || weightString.includes('KG')) {
+          return numericValue;
+        } else if (weightString.includes('g') && !weightString.includes('kg')) {
+          return numericValue / 1000;
+        } else if (weightString.includes('L') || weightString.includes('l')) {
+          return numericValue; // Assume 1L = 1kg for simplicity
+        } else if (weightString.includes('units') || weightString.includes('unit')) {
+          return 0.5; // Assume each unit is 0.5kg
+        }
+        return numericValue;
+      },
+
+      // Get total weight of cart in kg
+      getCartTotalWeight: () => {
+        const { cart } = get();
+        return cart.reduce((sum, item) => {
+          const itemWeight = get().getWeightInKg(item.weight);
+          return sum + (itemWeight * item.quantity);
+        }, 0);
+      },
+
+      // Check if adding item exceeds limits
+      canAddToCart: (productId, additionalQuantity = 1) => {
+        const { cart, getWeightInKg } = get();
+        const existingItem = cart.find(item => item.id === productId);
+
+        if (!existingItem) return { allowed: true, message: "" };
+
+        const itemWeight = getWeightInKg(existingItem.weight);
+        const newTotalWeight = (existingItem.quantity + additionalQuantity) * itemWeight;
+
+        // Check individual product limit (10kg)
+        if (newTotalWeight > 10) {
+          return {
+            allowed: false,
+            message: `Cannot add more than 10kg of ${existingItem.name.split('(')[0].trim()}`
+          };
+        }
+
+        return { allowed: true, message: "" };
+      },
+
       addOrder: (order) =>
         set((state) => ({
           orders: [order, ...state.orders],

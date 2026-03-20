@@ -7,11 +7,29 @@ import {
   Dimensions,
   Image,
   FlatList,
+  Easing,
+  UIManager,
+  Platform,
+  LayoutAnimation,
+  TextInput,
+  Alert,
 } from "react-native";
 import { useState, useRef, useEffect } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { ShoppingCart, Plus, Minus, X, ArrowLeft, Clock, Flame, Snowflake, Package } from "lucide-react-native";
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  ArrowLeft,
+  Search,
+  Leaf,
+  Snowflake,
+  Timer,
+  Package,
+  X,
+  Flame,
+} from "lucide-react-native";
 import {
   useFonts,
   Inter_400Regular,
@@ -22,14 +40,22 @@ import {
 import { useStore } from "@/store/useStore";
 import { useRouter } from "expo-router";
 
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = (width - 120 - 24) / 2;
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
-// Filter buttons data
+const { width } = Dimensions.get("window");
+const CARD_WIDTH = (width - 100 - 16) / 2;
+
+// Filter buttons data with updated icons - Added Coal after Instant
 const FILTER_BUTTONS = [
-  { id: "fresh", name: "Fresh", icon: Flame },
+  { id: "fresh", name: "Fresh", icon: Leaf },
   { id: "frozen", name: "Frozen", icon: Snowflake },
-  { id: "instant", name: "Instant", icon: Package },
+  { id: "instant", name: "Instant", icon: Timer },
+  { id: "coal", name: "Coal", icon: Flame },
   { id: "other", name: "Other", icon: Package },
 ];
 
@@ -57,9 +83,10 @@ const PRODUCT_IMAGES = {
   "Prawns Large": require("../../assets/images/prawns.avif"),
   "Green Chilli": require("../../assets/images/greenchilli.webp"),
   "Coriander Bunch": require("../../assets/images/kottimeera.webp"),
+  "Coal": require("../../assets/images/coal.png"), // Added Coal image
 };
 
-const FALLBACK_IMAGE = require("../../assets/images/redcap.png");
+const FALLBACK_IMAGE = require("../../assets/images/banana.webp");
 
 // Categories with updated names
 const CATEGORIES = [
@@ -364,7 +391,208 @@ const DUMMY_PRODUCTS = [
     category: "snacks-fruits",
     imageKey: "dragon"
   },
+  {
+    id: "25",
+    name: "Coal (Bricket)",
+    mrp: 150,
+    retailPrice: 130,
+    wholesalePrice: 120,
+    weight: "5 kg",
+    discount: "13",
+    time: "15 MINS",
+    category: "other",
+    imageKey: "Coal"
+  },
+  {
+    id: "26",
+    name: "Charcoal (Matti Bricket)",
+    mrp: 180,
+    retailPrice: 160,
+    wholesalePrice: 145,
+    weight: "5 kg",
+    discount: "11",
+    time: "15 MINS",
+    category: "other",
+    imageKey: "Coal"
+  },
 ];
+
+// Separate Product Card Component
+const ProductCard = ({ item, onIncrement, onDecrement, itemCount, getProductImage }) => {
+  const buttonRef = useRef(null);
+
+  return (
+    <View
+      style={{
+        width: CARD_WIDTH,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: "#E5E9F0",
+        overflow: "hidden",
+      }}
+    >
+      {/* Product Image */}
+      <Image
+        source={getProductImage(item)}
+        style={{
+          width: "100%",
+          height: CARD_WIDTH,
+          resizeMode: "cover",
+        }}
+      />
+
+      {/* Product Details */}
+      <View style={{
+        padding: 10,
+        height: 130,
+        justifyContent: 'space-between',
+      }}>
+        <View>
+          <Text
+            style={{
+              fontFamily: "Inter_500Medium",
+              fontSize: 10,
+              color: "#64748B",
+              marginBottom: 2,
+            }}
+          >
+            {item.weight}
+          </Text>
+
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 13,
+              color: "#1E293B",
+              marginBottom: 4,
+              height: 36,
+            }}
+            numberOfLines={2}
+          >
+            {item.name}
+          </Text>
+
+          {/* Price Row */}
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            marginBottom: 6,
+          }}>
+            <Text
+              style={{
+                fontFamily: "Inter_700Bold",
+                fontSize: 14,
+                color: "#124703",
+              }}
+            >
+              ₹{item.retailPrice}
+            </Text>
+            <Text
+              style={{
+                fontFamily: "Inter_400Regular",
+                fontSize: 11,
+                color: "#94A3B8",
+                textDecorationLine: "line-through",
+              }}
+            >
+              ₹{item.mrp}
+            </Text>
+          </View>
+        </View>
+
+        {/* Add/Quantity Controls */}
+        {itemCount === 0 ? (
+          <TouchableOpacity
+            ref={buttonRef}
+            onPress={() => onIncrement(item, buttonRef)}
+            style={{
+              backgroundColor: "#FFFFFF",
+              paddingVertical: 6,
+              borderRadius: 25,
+              alignItems: "center",
+              borderWidth: 1.5,
+              borderColor: "#124703",
+              flexDirection: "row",
+              justifyContent: "center",
+              gap: 4,
+              height: 34,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 12,
+                color: "#124703",
+              }}
+            >
+              ADD
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              backgroundColor: "#FFFFFF",
+              borderRadius: 25,
+              borderWidth: 1.5,
+              borderColor: "#124703",
+              padding: 3,
+              height: 34,
+            }}
+          >
+            <TouchableOpacity
+              onPress={() => onDecrement(item.id)}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: itemCount === 1 ? "#F8F9FA" : "#124703",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Minus
+                size={14}
+                color={itemCount === 1 ? "#94A3B8" : "#FFFFFF"}
+              />
+            </TouchableOpacity>
+
+            <Text
+              style={{
+                fontFamily: "Inter_700Bold",
+                fontSize: 13,
+                color: "#1E293B",
+                minWidth: 28,
+                textAlign: "center",
+              }}
+            >
+              {itemCount}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => onIncrement(item, buttonRef)}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: "#124703",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Plus size={14} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
 
 export default function CategoriesPage() {
   const insets = useSafeAreaInsets();
@@ -378,35 +606,80 @@ export default function CategoriesPage() {
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedFilter, setSelectedFilter] = useState("fresh");
+  const [searchQuery, setSearchQuery] = useState("");
   const [cartAnimation] = useState(new Animated.Value(1));
+  const [addedItem, setAddedItem] = useState(null);
+  const [showToast, setShowToast] = useState(false);
+  const [showLimitToast, setShowLimitToast] = useState(false);
+  const [limitMessage, setLimitMessage] = useState("");
 
-  const { userRole, cart, addToCart, updateQuantity } = useStore();
+  // Animation values for flying image
+  const flyImagePosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const flyImageScale = useRef(new Animated.Value(1)).current;
+  const flyImageOpacity = useRef(new Animated.Value(0)).current;
+  const flyImageRotate = useRef(new Animated.Value(0)).current;
+
+  // Reference to cart icon for animation destination
+  const cartIconRef = useRef(null);
+  const [cartIconLayout, setCartIconLayout] = useState({ x: 0, y: 0 });
+
+  const { userRole, cart, addToCart, updateQuantity, getCartTotalWeight } = useStore();
 
   // Animate cart icon when item added
   useEffect(() => {
     if (cartCount > 0) {
       Animated.sequence([
         Animated.timing(cartAnimation, {
-          toValue: 1.2,
-          duration: 100,
+          toValue: 1.3,
+          duration: 150,
           useNativeDriver: true,
         }),
         Animated.timing(cartAnimation, {
           toValue: 1,
-          duration: 100,
+          duration: 150,
           useNativeDriver: true,
         }),
       ]).start();
     }
   }, [cartCount]);
 
-  // Filter products by category
-  const products = selectedCategory === "all"
-    ? DUMMY_PRODUCTS
-    : DUMMY_PRODUCTS.filter(p => p.category === selectedCategory);
+  // Hide toast after 1.5 seconds
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setShowToast(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
+
+  // Hide limit toast after 2 seconds
+  useEffect(() => {
+    if (showLimitToast) {
+      const timer = setTimeout(() => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setShowLimitToast(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showLimitToast]);
+
+  // Filter products by category and search query
+  const filteredProducts = DUMMY_PRODUCTS.filter(product => {
+    // First filter by category
+    const categoryMatch = selectedCategory === "all" || product.category === selectedCategory;
+
+    // Then filter by search query
+    const searchMatch = searchQuery === "" ||
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.name.includes(searchQuery);
+
+    return categoryMatch && searchMatch;
+  });
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const cartTotalWeight = getCartTotalWeight();
 
   const getProductImage = (product) => {
     return PRODUCT_IMAGES[product.imageKey] || FALLBACK_IMAGE;
@@ -417,19 +690,225 @@ export default function CategoriesPage() {
     return item ? item.quantity : 0;
   };
 
-  const handleIncrement = (product) => {
+  const getItemWeightInKg = (weight) => {
+    if (weight.includes('kg') || weight.includes('Kg') || weight.includes('KG')) {
+      return parseFloat(weight) || 1;
+    } else if (weight.includes('g') && !weight.includes('kg')) {
+      const grams = parseFloat(weight) || 0;
+      return grams / 1000;
+    } else if (weight.includes('L') || weight.includes('l')) {
+      return parseFloat(weight) || 1;
+    } else if (weight.includes('units') || weight.includes('unit')) {
+      return 0.5; // Assume each unit is 0.5kg
+    }
+    return 1; // Default weight
+  };
+
+  const measureCartIcon = () => {
+    return new Promise((resolve) => {
+      if (cartIconRef.current) {
+        cartIconRef.current.measure((x, y, width, height, pageX, pageY) => {
+          const layout = {
+            x: pageX + width / 2,
+            y: pageY + height / 2
+          };
+          setCartIconLayout(layout);
+          resolve(layout);
+        });
+      } else {
+        resolve({ x: width - 30, y: insets.top + 30 });
+      }
+    });
+  };
+
+  const startFlyAnimation = async (product, buttonLayout) => {
+    // Get cart icon position
+    const cartPos = await measureCartIcon();
+
+    // Set the flying image to start at button position
+    flyImagePosition.setValue({ x: buttonLayout.pageX, y: buttonLayout.pageY });
+    flyImageScale.setValue(0.8); // Start slightly smaller
+    flyImageOpacity.setValue(1);
+    flyImageRotate.setValue(0);
+
+    // Create a curved path with slow jump and size increase
+    const midX = (buttonLayout.pageX + cartPos.x) / 2;
+    const midY = Math.min(buttonLayout.pageY, cartPos.y) - 100; // Higher arc for jump effect
+
+    // Sequence: First jump up slowly with size increase, then fly to cart
+    Animated.sequence([
+      // First animation - slow jump up with size increase (stays in place)
+      Animated.parallel([
+        Animated.timing(flyImagePosition.y, {
+          toValue: buttonLayout.pageY - 80, // Jump up 80px
+          duration: 400,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flyImageScale, {
+          toValue: 1.8, // Increase size by 80%
+          duration: 400,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flyImageRotate, {
+          toValue: 0.2, // Slight rotation
+          duration: 400,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      // Second animation - slow fall back down to original position with slight size decrease
+      Animated.parallel([
+        Animated.timing(flyImagePosition.y, {
+          toValue: buttonLayout.pageY,
+          duration: 300,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flyImageScale, {
+          toValue: 1.5, // Still larger than original
+          duration: 300,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      // Third animation - quick bounce up again
+      Animated.parallel([
+        Animated.timing(flyImagePosition.y, {
+          toValue: buttonLayout.pageY - 40,
+          duration: 200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flyImageScale, {
+          toValue: 1.6,
+          duration: 200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      // Fourth animation - final position at button before flying
+      Animated.parallel([
+        Animated.timing(flyImagePosition.y, {
+          toValue: buttonLayout.pageY,
+          duration: 150,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flyImageScale, {
+          toValue: 1.4,
+          duration: 150,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      // Fifth animation - now fly to cart with slow movement
+      Animated.parallel([
+        Animated.timing(flyImagePosition.x, {
+          toValue: cartPos.x,
+          duration: 1200, // Slow movement to cart
+          easing: Easing.bezier(0.2, 0.8, 0.4, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flyImagePosition.y, {
+          toValue: cartPos.y,
+          duration: 1200,
+          easing: Easing.bezier(0.3, 0.7, 0.3, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flyImageScale, {
+          toValue: 0.3,
+          duration: 1100,
+          easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flyImageRotate, {
+          toValue: 2, // Two full rotations while flying
+          duration: 1200,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.delay(1000),
+          Animated.timing(flyImageOpacity, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+    ]).start(() => {
+      setAddedItem(product);
+      setShowToast(true);
+    });
+  };
+
+  const checkAndShowLimitMessage = (product, newQuantity) => {
+    const itemWeight = getItemWeightInKg(product.weight);
+    const currentItem = cart.find(item => item.id === product.id);
+    const currentItemQuantity = currentItem ? currentItem.quantity : 0;
+    const newItemTotalWeight = (currentItemQuantity + 1) * itemWeight;
+
+    // Check individual product limit (10kg)
+    if (newItemTotalWeight > 10) {
+      setLimitMessage(`Cannot add more than 10kg of ${product.name.split('(')[0].trim()}`);
+      setShowLimitToast(true);
+      return false;
+    }
+
+    // Check overall cart limit (30kg)
+    const newTotalWeight = cartTotalWeight + itemWeight;
+    if (newTotalWeight > 30) {
+      const remainingWeight = (30 - cartTotalWeight).toFixed(1);
+      setLimitMessage(`Overall cart limit is 30kg. You can add only ${remainingWeight}kg more.`);
+      setShowLimitToast(true);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleIncrement = (product, buttonRef) => {
     const existingItem = cart.find(item => item.id === product.id);
+    const price = userRole === "wholesale" ? product.wholesalePrice : product.retailPrice;
 
     if (existingItem) {
+      // Check limits before incrementing
+      if (!checkAndShowLimitMessage(product, existingItem.quantity + 1)) {
+        return;
+      }
+
       updateQuantity(product.id, existingItem.quantity + 1);
+      setAddedItem(product);
+      setShowToast(true);
     } else {
+      // Check limits before adding new item
+      if (!checkAndShowLimitMessage(product, 1)) {
+        return;
+      }
+
+      // Measure button position for fly animation
+      if (buttonRef && buttonRef.current) {
+        buttonRef.current.measure((x, y, width, height, pageX, pageY) => {
+          startFlyAnimation(product, {
+            pageX: pageX + width / 2,
+            pageY: pageY + height / 2
+          });
+        });
+      }
+
       addToCart({
         id: product.id,
         name: product.name,
-        price: userRole === "wholesale" ? product.wholesalePrice : product.retailPrice,
+        price: price,
         quantity: 1,
         weight: product.weight,
         image: getProductImage(product),
+        retailPrice: product.retailPrice,
+        wholesalePrice: product.wholesalePrice,
+        mrp: product.mrp,
+        imageKey: product.imageKey,
       });
     }
   };
@@ -443,11 +922,39 @@ export default function CategoriesPage() {
     }
   };
 
+  // Interpolate rotation for spinning effect
+  const spin = flyImageRotate.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: ['0deg', '180deg', '360deg']
+  });
+
   if (!fontsLoaded) return null;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F9FA" }}>
       <StatusBar style="dark" />
+
+      {/* Flying Image Animation */}
+      <Animated.Image
+        source={addedItem ? getProductImage(addedItem) : FALLBACK_IMAGE}
+        style={{
+          position: 'absolute',
+          width: 50,
+          height: 50,
+          borderRadius: 25,
+          borderWidth: 2,
+          borderColor: '#FFFFFF',
+          zIndex: 1000,
+          transform: [
+            { translateX: flyImagePosition.x },
+            { translateY: flyImagePosition.y },
+            { scale: flyImageScale },
+            { rotate: spin },
+          ],
+          opacity: flyImageOpacity,
+          pointerEvents: 'none', // This ensures the flying image doesn't block touches
+        }}
+      />
 
       {/* Header */}
       <View
@@ -458,6 +965,7 @@ export default function CategoriesPage() {
           backgroundColor: "#FFFFFF",
           borderBottomWidth: 1,
           borderBottomColor: "#E5E9F0",
+          zIndex: 100, // Ensure header is above content but below flying image
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -475,32 +983,56 @@ export default function CategoriesPage() {
             <ArrowLeft size={22} color="#1E293B" />
           </TouchableOpacity>
 
-          <View style={{ flex: 1 }}>
+          {/* Search Bar - Now Working */}
+          <View style={{ flex: 1, position: "relative" }}>
             <View style={{
-              backgroundColor: "#F8F9FA",
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
+              position: "absolute",
+              left: 12,
+              top: 12,
+              zIndex: 1,
             }}>
-              <Text
+              <Search size={18} color="#94A3B8" />
+            </View>
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search for atta, dal, and more"
+              placeholderTextColor="#94A3B8"
+              style={{
+                backgroundColor: "#F8F9FA",
+                borderRadius: 12,
+                paddingHorizontal: 40,
+                paddingVertical: 12,
+                fontFamily: "Inter_400Regular",
+                fontSize: 14,
+                color: "#1E293B",
+                borderWidth: 1,
+                borderColor: "#E5E9F0",
+              }}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery("")}
                 style={{
-                  fontFamily: "Inter_400Regular",
-                  fontSize: 15,
-                  color: "#64748B",
+                  position: "absolute",
+                  right: 12,
+                  top: 12,
+                  zIndex: 1,
                 }}
               >
-                🔍 Search for atta, dal, and more
-              </Text>
-            </View>
+                <X size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
           </View>
 
           <TouchableOpacity
+            ref={cartIconRef}
             onPress={() => router.push("/(tabs)/cart")}
             style={{
               width: 44,
               height: 44,
               borderRadius: 12,
-              backgroundColor: "#2E7D32",
+              backgroundColor: "#124703",
               alignItems: "center",
               justifyContent: "center",
               position: "relative",
@@ -540,7 +1072,7 @@ export default function CategoriesPage() {
           </TouchableOpacity>
         </View>
 
-        {/* Filter Buttons - Fresh, Frozen, Instant, Other */}
+        {/* Filter Buttons with Updated Icons - Added Coal */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -564,9 +1096,9 @@ export default function CategoriesPage() {
                   paddingHorizontal: 16,
                   paddingVertical: 10,
                   borderRadius: 30,
-                  backgroundColor: isSelected ? "#2E7D32" : "#F8F9FA",
+                  backgroundColor: isSelected ? "#124703" : "#F8F9FA",
                   borderWidth: 1,
-                  borderColor: isSelected ? "#2E7D32" : "#E5E9F0",
+                  borderColor: isSelected ? "#124703" : "#E5E9F0",
                 }}
               >
                 <Icon
@@ -588,11 +1120,126 @@ export default function CategoriesPage() {
         </ScrollView>
       </View>
 
+      {/* Success Toast */}
+      {showToast && addedItem && (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: insets.top + 100,
+            left: 20,
+            right: 20,
+            backgroundColor: '#1E293B',
+            borderRadius: 30,
+            padding: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            zIndex: 100,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
+            pointerEvents: 'none', // This ensures toast doesn't block touches
+          }}
+        >
+          <Image
+            source={getProductImage(addedItem)}
+            style={{ width: 30, height: 30, borderRadius: 15 }}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 13,
+                color: "#FFFFFF",
+              }}
+              numberOfLines={1}
+            >
+              {addedItem.name}
+            </Text>
+            <Text
+              style={{
+                fontFamily: "Inter_400Regular",
+                fontSize: 11,
+                color: "#94A3B8",
+              }}
+            >
+              Added to cart
+            </Text>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Limit Warning Toast */}
+      {showLimitToast && (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: insets.top + 100,
+            left: 20,
+            right: 20,
+            backgroundColor: '#C62828',
+            borderRadius: 30,
+            padding: 16,
+            zIndex: 100,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
+            pointerEvents: 'none',
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 14,
+              color: "#FFFFFF",
+              textAlign: "center",
+            }}
+          >
+            ⚠️ {limitMessage}
+          </Text>
+        </Animated.View>
+      )}
+
+      {/* Cart Weight Indicator */}
+      {cartCount > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            top: insets.top + 180,
+            right: 20,
+            backgroundColor: '#124703',
+            borderRadius: 20,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            zIndex: 90,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 2,
+            elevation: 3,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 12,
+              color: "#FFFFFF",
+            }}
+          >
+            Total: {cartTotalWeight.toFixed(1)}kg / 30kg
+          </Text>
+        </View>
+      )}
+
       {/* Main Content */}
       <View style={{ flex: 1, flexDirection: "row" }}>
-        {/* Left Sidebar - Categories with round images */}
+        {/* Left Sidebar - Categories */}
         <View style={{
-          width: 120,
+          width: 80,
           backgroundColor: "#FFFFFF",
           borderRightWidth: 1,
           borderRightColor: "#E5E9F0",
@@ -611,7 +1258,7 @@ export default function CategoriesPage() {
                   backgroundColor: selectedCategory === item.id ? "#E8F5E9" : "transparent",
                   alignItems: "center",
                   borderRightWidth: 3,
-                  borderRightColor: selectedCategory === item.id ? "#2E7D32" : "transparent",
+                  borderRightColor: selectedCategory === item.id ? "#124703" : "transparent",
                 }}
               >
                 <Image
@@ -622,14 +1269,14 @@ export default function CategoriesPage() {
                     borderRadius: 32,
                     marginBottom: 8,
                     borderWidth: 2,
-                    borderColor: selectedCategory === item.id ? "#2E7D32" : "#E5E9F0",
+                    borderColor: selectedCategory === item.id ? "#124703" : "#E5E9F0",
                   }}
                 />
                 <Text
                   style={{
                     fontFamily: selectedCategory === item.id ? "Inter_600SemiBold" : "Inter_500Medium",
                     fontSize: 12,
-                    color: selectedCategory === item.id ? "#2E7D32" : "#64748B",
+                    color: selectedCategory === item.id ? "#124703" : "#64748B",
                     textAlign: "center",
                   }}
                   numberOfLines={2}
@@ -643,195 +1290,60 @@ export default function CategoriesPage() {
 
         {/* Products Grid */}
         <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-          <FlatList
-            data={products}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 12 }}
-            contentContainerStyle={{
-              paddingVertical: 12,
-              paddingBottom: insets.bottom + 20, // Normal padding without cart bar
-            }}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => {
-              const itemCount = getCartItemCount(item.id);
+          {filteredProducts.length === 0 ? (
+            <View style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingHorizontal: 20,
+            }}>
+              <Search size={64} color="#E5E9F0" />
+              <Text style={{
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 18,
+                color: "#1E293B",
+                marginTop: 16,
+                marginBottom: 8,
+              }}>
+                No products found
+              </Text>
+              <Text style={{
+                fontFamily: "Inter_400Regular",
+                fontSize: 14,
+                color: "#64748B",
+                textAlign: 'center',
+              }}>
+                Try searching with different keywords or browse categories
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 12 }}
+              contentContainerStyle={{
+                paddingVertical: 12,
+                paddingBottom: insets.bottom + 20,
+              }}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const itemCount = getCartItemCount(item.id);
 
-              return (
-                <View
-                  style={{
-                    width: CARD_WIDTH,
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: 16,
-                    marginBottom: 12,
-                    borderWidth: 1,
-                    borderColor: "#E5E9F0",
-                    overflow: "hidden",
-                  }}
-                >
-                  {/* Product Image - No badges */}
-                  <Image
-                    source={getProductImage(item)}
-                    style={{
-                      width: "100%",
-                      height: CARD_WIDTH,
-                      resizeMode: "cover",
-                    }}
+                return (
+                  <ProductCard
+                    item={item}
+                    itemCount={itemCount}
+                    onIncrement={handleIncrement}
+                    onDecrement={handleDecrement}
+                    getProductImage={getProductImage}
                   />
-
-                  {/* Product Details - Fixed height to prevent button movement */}
-                  <View style={{
-                    padding: 10,
-                    height: 130, // Reduced height for card
-                    justifyContent: 'space-between',
-                  }}>
-                    <View>
-                      <Text
-                        style={{
-                          fontFamily: "Inter_500Medium",
-                          fontSize: 10,
-                          color: "#64748B",
-                          marginBottom: 2,
-                        }}
-                      >
-                        {item.weight}
-                      </Text>
-
-                      <Text
-                        style={{
-                          fontFamily: "Inter_600SemiBold",
-                          fontSize: 13,
-                          color: "#1E293B",
-                          marginBottom: 4,
-                          height: 36, // Reduced height for name (2 lines)
-                        }}
-                        numberOfLines={2}
-                      >
-                        {item.name}
-                      </Text>
-
-                      {/* Price Row */}
-                      <View style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                        marginBottom: 6,
-                      }}>
-                        <Text
-                          style={{
-                            fontFamily: "Inter_700Bold",
-                            fontSize: 14,
-                            color: "#2E7D32",
-                          }}
-                        >
-                          ₹{userRole === "wholesale" ? item.wholesalePrice : item.retailPrice}
-                        </Text>
-                        <Text
-                          style={{
-                            fontFamily: "Inter_400Regular",
-                            fontSize: 11,
-                            color: "#94A3B8",
-                            textDecorationLine: "line-through",
-                          }}
-                        >
-                          ₹{item.mrp}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Add/Quantity Controls - Fixed position at bottom */}
-                    {itemCount === 0 ? (
-                      <TouchableOpacity
-                        onPress={() => handleIncrement(item)}
-                        style={{
-                          backgroundColor: "#FFFFFF",
-                          paddingVertical: 6,
-                          borderRadius: 25,
-                          alignItems: "center",
-                          borderWidth: 1.5,
-                          borderColor: "#2E7D32",
-                          flexDirection: "row",
-                          justifyContent: "center",
-                          gap: 4,
-                          height: 34, // Reduced height
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontFamily: "Inter_600SemiBold",
-                            fontSize: 12,
-                            color: "#2E7D32",
-                          }}
-                        >
-                          ADD
-                        </Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          backgroundColor: "#FFFFFF",
-                          borderRadius: 25,
-                          borderWidth: 1.5,
-                          borderColor: "#2E7D32",
-                          padding: 3,
-                          height: 34, // Reduced height
-                        }}
-                      >
-                        <TouchableOpacity
-                          onPress={() => handleDecrement(item.id)}
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: 14,
-                            backgroundColor: itemCount === 1 ? "#F8F9FA" : "#2E7D32",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Minus
-                            size={14}
-                            color={itemCount === 1 ? "#94A3B8" : "#FFFFFF"}
-                          />
-                        </TouchableOpacity>
-
-                        <Text
-                          style={{
-                            fontFamily: "Inter_700Bold",
-                            fontSize: 13,
-                            color: "#1E293B",
-                            minWidth: 28,
-                            textAlign: "center",
-                          }}
-                        >
-                          {itemCount}
-                        </Text>
-
-                        <TouchableOpacity
-                          onPress={() => handleIncrement(item)}
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: 14,
-                            backgroundColor: "#2E7D32",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Plus size={14} color="#FFFFFF" />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              );
-            }}
-          />
+                );
+              }}
+            />
+          )}
         </View>
       </View>
-
-      {/* No bottom view cart bar - completely removed */}
     </View>
   );
 }
